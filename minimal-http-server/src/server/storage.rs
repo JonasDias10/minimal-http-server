@@ -24,8 +24,6 @@ fn get_root_path() -> String {
 pub fn save_file(filename: &str, content: &[u8]) -> io::Result<()> {
     let filename_normalized = normalize_filename(filename);
 
-    println!("Normalized filename: {}", filename_normalized);
-
     if !is_allowed_extension(&filename_normalized) {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
