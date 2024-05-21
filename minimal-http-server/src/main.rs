@@ -29,43 +29,35 @@ fn handle_client(mut stream: TcpStream) -> Result<()> {
     };
 
     match request.method.as_str() {
-        "GET" => {
-            let filename = normalize_filename(&request.path);
-
-            match storage::get_file(&filename) {
-                Ok(buffer) => {
-                    let content =
-                        format!("{}{}", String::from_utf8_lossy(&buffer[..]), "\n").into_bytes();
-                    stream.write(&content).expect("Failed to write to stream");
-                }
-                Err(exception) => {
-                    println!("Error: {}", exception);
-
-                    let content = format!("Error: {}", exception).into_bytes();
-                    stream.write(&content).expect("Failed to write to stream");
-                }
+        "GET" => match storage::get_file(&request.path) {
+            Ok(buffer) => {
+                let content =
+                    format!("{}{}", String::from_utf8_lossy(&buffer[..]), "\n").into_bytes();
+                stream.write(&content).expect("Failed to write to stream");
             }
-        }
-        "POST" => {
-            let filename = normalize_filename(&request.path);
+            Err(exception) => {
+                println!("Error: {}", exception);
 
-            match storage::save_file(&filename, &request.body) {
-                Ok(()) => {
-                    println!("File saved successfully!");
-                }
-                Err(exception) => {
-                    println!("Error: {}", exception);
-                }
+                let content = format!("Error: {}", exception).into_bytes();
+                stream.write(&content).expect("Failed to write to stream");
             }
-        }
+        },
+        "POST" => match storage::save_file(&request.path, &request.body) {
+            Ok(()) => {
+                println!("File saved successfully!");
+            }
+            Err(exception) => {
+                println!("Error: {}", exception);
+            }
+        },
         method => {
             println!("Unknown request method: {}", method);
+
+            stream
+                .write(b"Unknown request method")
+                .expect("Failed to write to stream");
         }
     }
 
     Ok(())
-}
-
-fn normalize_filename(filename: &str) -> String {
-    filename.split('/').last().unwrap().trim().to_string()
 }
