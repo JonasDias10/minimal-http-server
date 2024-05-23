@@ -2,6 +2,7 @@ use std::io::{Read, Result};
 use std::net::TcpStream;
 
 const BUFFER_SIZE: usize = 1024;
+const HEADER_END_SEQUENCE: &[u8; 4] = b"\r\n\r\n";
 
 pub struct Request {
     pub method: String,
@@ -12,44 +13,27 @@ pub struct Request {
 }
 
 impl Request {
-    /**
-     * Parse the request from the stream
-     * @param stream: TcpStream
-     * @return Request
-     */
     pub fn parse(stream: &mut TcpStream) -> Result<Self> {
-        let mut buffer = [0; BUFFER_SIZE];
+        let mut buffer = Vec::new();
+        let mut temp_buffer = [0; BUFFER_SIZE];
 
-        stream.read(&mut buffer)?;
+        let bytes_read = stream.read(&mut temp_buffer)?;
+        buffer.extend_from_slice(&temp_buffer[..bytes_read]);
 
-        let request_as_string = String::from_utf8_lossy(&buffer);
-        let lines: Vec<&str> = request_as_string.lines().collect();
+        let (headers_part, body_part) = split_buffer(&buffer);
 
-        // Take the first line and parse it to the method, path and version
-        let first_line_parts: Vec<&str> = lines[0].split_whitespace().collect();
-        let method = first_line_parts.get(0).unwrap_or(&"").to_string();
-        let path = first_line_parts.get(1).unwrap_or(&"").to_string();
-        let version = first_line_parts.get(2).unwrap_or(&"").to_string();
+        let headers_string = String::from_utf8_lossy(headers_part);
+        let headers_lines: Vec<&str> = headers_string.lines().collect();
 
-        let mut data_start_index = None;
-        let headers = get_headers(&lines, &mut data_start_index);
+        let (method, path, version) = parse_request_first_line(headers_lines[0]);
+        let headers = parse_headers(&headers_lines[1..]);
 
         let content_length = get_content_length(&headers);
-        let mut body = Vec::new();
 
-        // Parse the body if it exists
-        if content_length > 0 {
-            // Read the body from the lines after the headers
-            let mut body_bytes = get_remaining_request_data(&lines, data_start_index);
-            body_bytes.truncate(content_length);
-            body.append(&mut body_bytes);
-
-            // Read the rest of the body from the stream
-            let total_read = body.len();
+        let mut body = Vec::from(body_part);
+        if body.len() < content_length {
             body.resize(content_length, 0);
-            if total_read < content_length {
-                stream.read_exact(&mut body[total_read..])?;
-            }
+            stream.read_exact(&mut body[body_part.len()..])?;
         }
 
         Ok(Request {
@@ -62,29 +46,18 @@ impl Request {
     }
 }
 
-/**
- * Get the content length from the headers
- * @param headers
- * @return content length
- */
-fn get_content_length(headers: &Vec<(String, String)>) -> usize {
+fn get_content_length(headers: &[(String, String)]) -> usize {
     headers
         .iter()
-        .find(|&(ref key, ref _value)| key.eq_ignore_ascii_case("Content-Length"))
-        .map(|(_key, value)| value.parse::<usize>().unwrap_or(0))
+        .find(|(key, _value)| key.eq_ignore_ascii_case("Content-Length"))
+        .and_then(|(_key, value)| value.parse::<usize>().ok())
         .unwrap_or(0)
 }
 
-/**
- * Get the headers from the request
- * @param request
- * @return headers
- */
-fn get_headers(request: &Vec<&str>, data_start_index: &mut Option<usize>) -> Vec<(String, String)> {
+fn parse_headers(lines: &[&str]) -> Vec<(String, String)> {
     let mut headers: Vec<(String, String)> = Vec::new();
-    for (index, line) in request.iter().enumerate().skip(1) {
+    for line in lines.iter().skip(1) {
         if line.trim().is_empty() {
-            *data_start_index = Some(index + 1);
             break;
         }
         let parts: Vec<&str> = line.split(": ").collect();
@@ -95,21 +68,23 @@ fn get_headers(request: &Vec<&str>, data_start_index: &mut Option<usize>) -> Vec
     headers
 }
 
-/**
- * Get the remaining request data after the headers
- * @param request
- * @param start_index
- * @return partial body
- */
-fn get_remaining_request_data(request: &Vec<&str>, start_index: Option<usize>) -> Vec<u8> {
-    let mut body_bytes = Vec::new();
+fn parse_request_first_line(request_first_line: &str) -> (String, String, String) {
+    let parts: Vec<&str> = request_first_line.split_whitespace().collect();
+    let method = parts.get(0).unwrap_or(&"").to_string();
+    let path = parts.get(1).unwrap_or(&"").to_string();
+    let version = parts.get(2).unwrap_or(&"").to_string();
+    (method, path, version)
+}
 
-    if let Some(index) = start_index {
-        for line in request.iter().skip(index) {
-            body_bytes.extend_from_slice(line.as_bytes());
-            body_bytes.push(b'\n');
-        }
-    }
+fn get_final_position_of_headers(buffer: &[u8]) -> usize {
+    buffer
+        .windows(HEADER_END_SEQUENCE.len())
+        .position(|window| window == HEADER_END_SEQUENCE)
+        .unwrap()
+        + HEADER_END_SEQUENCE.len()
+}
 
-    body_bytes
+fn split_buffer(buffer: &[u8]) -> (&[u8], &[u8]) {
+    let final_position_headers = get_final_position_of_headers(&buffer);
+    buffer.split_at(final_position_headers)
 }
