@@ -20,7 +20,7 @@ impl Request {
         let bytes_read = stream.read(&mut temp_buffer)?;
         buffer.extend_from_slice(&temp_buffer[..bytes_read]);
 
-        let (headers_part, body_part) = split_buffer(&buffer);
+        let (headers_part, body_part) = split_buffer(&buffer)?;
 
         let headers_string = String::from_utf8_lossy(headers_part);
         let headers_lines: Vec<&str> = headers_string.lines().collect();
@@ -97,12 +97,11 @@ fn parse_request_first_line(request_first_line: &str) -> (String, String, String
  * @param buffer
  * @return final position
  */
-fn get_final_position_of_headers(buffer: &[u8]) -> usize {
+fn get_final_position_of_headers(buffer: &[u8]) -> Option<usize> {
     buffer
         .windows(HEADER_END_SEQUENCE.len())
         .position(|window| window == HEADER_END_SEQUENCE)
-        .unwrap()
-        + HEADER_END_SEQUENCE.len()
+        .map(|pos| pos + HEADER_END_SEQUENCE.len())
 }
 
 /**
@@ -110,7 +109,14 @@ fn get_final_position_of_headers(buffer: &[u8]) -> usize {
  * @param buffer
  * @return (headers part, body part)
  */
-fn split_buffer(buffer: &[u8]) -> (&[u8], &[u8]) {
+fn split_buffer(buffer: &[u8]) -> Result<(&[u8], &[u8])> {
     let final_position_headers = get_final_position_of_headers(&buffer);
-    buffer.split_at(final_position_headers)
+
+    match final_position_headers {
+        Some(final_position_headers) => Ok(buffer.split_at(final_position_headers)),
+        None => Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Invalid request",
+        )),
+    }
 }
