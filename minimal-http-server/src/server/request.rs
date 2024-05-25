@@ -46,6 +46,12 @@ impl Request {
     }
 }
 
+/**
+ * Get content length from headers.
+ * If not found, return 0
+ * @param headers
+ * @return content length
+ */
 fn get_content_length(headers: &[(String, String)]) -> usize {
     headers
         .iter()
@@ -54,9 +60,14 @@ fn get_content_length(headers: &[(String, String)]) -> usize {
         .unwrap_or(0)
 }
 
-fn parse_headers(lines: &[&str]) -> Vec<(String, String)> {
+/**
+ * Parse headers from headers lines.
+ * @param headers_lines
+ * @return headers
+*/
+fn parse_headers(headers_lines: &[&str]) -> Vec<(String, String)> {
     let mut headers: Vec<(String, String)> = Vec::new();
-    for line in lines.iter().skip(1) {
+    for line in headers_lines.iter().skip(1) {
         if line.trim().is_empty() {
             break;
         }
@@ -68,6 +79,11 @@ fn parse_headers(lines: &[&str]) -> Vec<(String, String)> {
     headers
 }
 
+/**
+ * Parse request first line.
+ * @param request_first_line
+ * @return (method, path, version)
+ */
 fn parse_request_first_line(request_first_line: &str) -> (String, String, String) {
     let parts: Vec<&str> = request_first_line.split_whitespace().collect();
     let method = parts.get(0).unwrap_or(&"").to_string();
@@ -76,6 +92,11 @@ fn parse_request_first_line(request_first_line: &str) -> (String, String, String
     (method, path, version)
 }
 
+/**
+ * Get final position of headers.
+ * @param buffer
+ * @return final position
+ */
 fn get_final_position_of_headers(buffer: &[u8]) -> usize {
     buffer
         .windows(HEADER_END_SEQUENCE.len())
@@ -84,6 +105,11 @@ fn get_final_position_of_headers(buffer: &[u8]) -> usize {
         + HEADER_END_SEQUENCE.len()
 }
 
+/**
+ * Split buffer into headers part and body part.
+ * @param buffer
+ * @return (headers part, body part)
+ */
 fn split_buffer(buffer: &[u8]) -> (&[u8], &[u8]) {
     let final_position_headers = get_final_position_of_headers(&buffer);
     buffer.split_at(final_position_headers)
