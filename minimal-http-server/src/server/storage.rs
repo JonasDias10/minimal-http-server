@@ -5,7 +5,7 @@ const STORAGE_DIRECTORY: &str = "/storage/";
 const ALLOWED_FILE_EXTENSIONS: [&str; 7] = ["jpg", "jpeg", "png", "svg", "html", "js", "css"];
 
 /**
- * Get the root path of the server
+ * Get the root path of the server.
  * @return the root path
  */
 fn get_root_path() -> String {
@@ -17,7 +17,7 @@ fn get_root_path() -> String {
 }
 
 /**
- * Save a file to the server storage
+ * Save a file to the server storage.
  * @param filename
  * @param content
  */
@@ -45,7 +45,7 @@ pub fn save_file(filename: &str, content: &[u8]) -> io::Result<()> {
 }
 
 /**
- * Get a file from the server storage
+ * Get a file from the server storage.
  * @param filename
  * @return the file
  */
@@ -74,7 +74,7 @@ pub fn get_file(filename: &str) -> io::Result<Vec<u8>> {
 }
 
 /**
- * Normalize the filename
+ * Normalize the filename.
  * @param filename
  * @return the normalized filename
  */
@@ -83,7 +83,7 @@ fn normalize_filename(filename: &str) -> String {
 }
 
 /**
- * Check if the filename is allowed
+ * Check if the filename is allowed.
  * @param filename
  * @return true if the filename is allowed, false otherwise
  */

@@ -4,6 +4,10 @@ use super::storage;
 use std::io::{Result, Write};
 use std::net::TcpStream;
 
+/**
+ * Handles a single client connection.
+ * @param stream - The client connection
+ */
 pub fn handle_client(mut stream: TcpStream) -> Result<()> {
     let request = match Request::parse(&mut stream) {
         Ok(req) => req,
