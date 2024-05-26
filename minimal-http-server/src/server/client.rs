@@ -106,6 +106,13 @@ fn handle_unknown_request(mut stream: TcpStream) -> Result<()> {
         Err(error) => return Err(error),
     }
 
+    match stream.flush() {
+        Ok(()) => {
+            println!("Stream flushed successfully");
+        }
+        Err(error) => return Err(error),
+    }
+
     Ok(())
 }
 
