@@ -5,6 +5,7 @@ use std::io::Result;
 pub enum Status {
     Ok,
     NotFound,
+    NotAllowed,
 }
 
 impl Status {
@@ -12,6 +13,7 @@ impl Status {
         match self {
             Status::Ok => "200 OK",
             Status::NotFound => "404 Not Found",
+            Status::NotAllowed => "405 Method Not Allowed",
         }
     }
 }
@@ -22,29 +24,24 @@ pub struct Response {
 }
 
 impl Response {
+    pub fn new(headers: Vec<(String, String)>, body: Vec<u8>) -> Response {
+        Response { headers, body }
+    }
+
     pub fn create_response(request: &request::Request) -> Result<Response> {
-        let mut body = Vec::new();
         let mut status = Status::Ok;
 
-        match request.method.as_str() {
-            "GET" => match storage::get_file(&request.path) {
-                Ok(buffer) => {
-                    body = buffer;
-                }
-                Err(exception) => {
-                    println!("Error: {}", exception);
+        let body = match storage::get_file(&request.path) {
+            Ok(buffer) => buffer,
+            Err(error) => {
+                println!("Error when try to get file: {}", error);
 
-                    let content = response_body_when_has_error(status.as_str());
+                status = Status::NotFound;
 
-                    body = content.into_bytes();
-
-                    status = Status::NotFound;
-                }
-            },
-            method => {
-                println!("Unknown request method: {}", method);
+                let content = response_body_when_has_error(status.as_str());
+                content.into_bytes()
             }
-        }
+        };
 
         let content_type = get_content_type(&request.path);
         let content_length = body.len();
@@ -67,14 +64,13 @@ impl Response {
         }
 
         response.extend_from_slice(b"\r\n");
-
         response.extend_from_slice(&self.body);
 
         response
     }
 }
 
-fn create_headers(content_type: &str, length: usize, status: &str) -> Vec<(String, String)> {
+pub fn create_headers(content_type: &str, length: usize, status: &str) -> Vec<(String, String)> {
     let mut headers = Vec::new();
 
     let fist_line = format!("HTTP/1.1 {}", status);
@@ -95,7 +91,7 @@ fn get_content_type(path: &str) -> String {
         Some("svg") => "image/svg+xml",
         Some("png") => "image/png",
         Some("jpg") | Some("jpeg") => "image/jpeg",
-        _default => "text/plain",
+        _default => "text/html",
     };
 
     content_type.to_string()
@@ -110,6 +106,25 @@ fn response_body_when_has_error(error_message: &str) -> String {
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <title>Minimal HTTP Server</title>
+
+                    <style>
+                        * {{
+                            margin: 0;
+                            padding: 0;
+                            box-sizing: border-box;
+                        }}
+
+                        body {{
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            height: 100vh;
+                        }}
+
+                        #container {{
+                            text-align: center;
+                        }}
+                    </style>
                 </head>
                 <body>
                     <div id="container">
