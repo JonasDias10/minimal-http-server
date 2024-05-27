@@ -70,6 +70,11 @@ impl Response {
     }
 }
 
+/**
+ * Create headers for response
+ * @params content_type, content_length, status
+ * @return the headers as Vec<(String, String)>
+ */
 pub fn create_headers(content_type: &str, length: usize, status: &str) -> Vec<(String, String)> {
     let mut headers = Vec::new();
 
@@ -81,6 +86,11 @@ pub fn create_headers(content_type: &str, length: usize, status: &str) -> Vec<(S
     headers
 }
 
+/**
+ * Get content type based on path
+ * @params path
+ * @return the content type as String
+ */
 fn get_content_type(path: &str) -> String {
     let file_type = path.split('.').last();
 
@@ -97,6 +107,11 @@ fn get_content_type(path: &str) -> String {
     content_type.to_string()
 }
 
+/**
+ * Create response body when has error
+ * @params error_message
+ * @return the body as String
+ */
 fn response_body_when_has_error(error_message: &str) -> String {
     format!(
         r#"
