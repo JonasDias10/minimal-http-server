@@ -116,6 +116,11 @@ fn handle_unknown_request(mut stream: TcpStream) -> Result<()> {
     Ok(())
 }
 
+/**
+ * Creates a body when an unknown request is received.
+ * @param error_message - The error message
+ * @return The body
+ */
 fn body_when_unknown_request(error_message: &str) -> Vec<u8> {
     format!(
         r#"
