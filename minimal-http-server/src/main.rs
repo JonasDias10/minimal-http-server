@@ -12,9 +12,9 @@ fn main() -> Result<()> {
         match stream {
             Ok(stream) => match client::handle_client(stream) {
                 Ok(()) => (),
-                Err(error) => println!("Error when handling client: {}", error),
+                Err(error) => eprintln!("Error when handling client: {}", error),
             },
-            Err(error) => println!("Error when creating stream: {}", error),
+            Err(error) => eprintln!("Error when creating stream: {}", error),
         }
     }
 

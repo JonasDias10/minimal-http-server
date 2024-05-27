@@ -34,7 +34,7 @@ impl Response {
         let body = match storage::get_file(&request.path) {
             Ok(buffer) => buffer,
             Err(error) => {
-                println!("Error when try to get file: {}", error);
+                eprintln!("Error when try to get file: {}", error);
 
                 status = Status::NotFound;
 
