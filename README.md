@@ -34,6 +34,3 @@ This project implements a minimal HTTP server in Rust that can handle basic HTTP
    ./start.sh
    ```
 
----
-
-**Author: Jonas Dias | [Social Media](https://jonas-dias.netlify.app/) | Thank You**
